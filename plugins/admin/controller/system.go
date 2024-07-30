@@ -11,6 +11,7 @@ import (
 	"github.com/GoAdminGroup/go-admin/modules/language"
 	"github.com/GoAdminGroup/go-admin/modules/system"
 	"github.com/GoAdminGroup/go-admin/template/types"
+	"github.com/dypflying/chime-common/version"
 )
 
 func (h *Handler) SystemInfo(ctx *context.Context) {
@@ -23,16 +24,10 @@ func (h *Handler) SystemInfo(ctx *context.Context) {
 		SetBody(stripedTable([]map[string]types.InfoItem{
 			{
 				"key":   types.InfoItem{Content: lg("app_name")},
-				"value": types.InfoItem{Content: "GoAdmin"},
+				"value": types.InfoItem{Content: "ChimeStack"},
 			}, {
-				"key":   types.InfoItem{Content: lg("go_admin_version")},
-				"value": types.InfoItem{Content: template.HTML(system.Version())},
-			}, {
-				"key":   types.InfoItem{Content: lg("theme_name")},
-				"value": types.InfoItem{Content: template.HTML(aTemplate().Name())},
-			}, {
-				"key":   types.InfoItem{Content: lg("theme_version")},
-				"value": types.InfoItem{Content: template.HTML(aTemplate().GetVersion())},
+				"key":   types.InfoItem{Content: lg("app_version")},
+				"value": types.InfoItem{Content: template.HTML(version.APP_VERSION)},
 			},
 		})).
 		GetContent()

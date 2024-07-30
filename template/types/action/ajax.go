@@ -179,8 +179,12 @@ func (ajax *AjaxAction) Js() template.JS {
 						let data = `+ajax.Data.JSON()+`;
 						`) + ajax.ParameterJS + template.JS(`
 						let id = $(this).attr("data-id");
+						let extra_id = $(this).attr("extra-id");
 						if (id && id !== "") {
 							data["id"] = id;
+						}
+						if (extra_id && extra_id !== "") {
+							data["extra_id"] = extra_id;
 						}
 						`+ajaxStatement+`
             		});`)

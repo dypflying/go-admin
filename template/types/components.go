@@ -232,6 +232,7 @@ type TheadItem struct {
 	EditType   string       `json:"edit_type"`
 	EditOption FieldOptions `json:"edit_option"`
 	Width      string       `json:"width"`
+	TextAlign  string       `json:"text_align"`
 }
 
 func (t Thead) GroupBy(group [][]string) []Thead {

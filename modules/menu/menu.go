@@ -166,6 +166,7 @@ func NewMenu(conn db.Connection, data NewMenuData) (int64, error) {
 }
 
 // GetGlobalMenu return Menu of given user model.
+// GetGlobalMenu
 func GetGlobalMenu(user models.UserModel, conn db.Connection, lang string, pluginNames ...string) *Menu {
 
 	var (
@@ -178,8 +179,8 @@ func GetGlobalMenu(user models.UserModel, conn db.Connection, lang string, plugi
 		plugName = pluginNames[0]
 	}
 
-	user.WithRoles().WithMenus()
-
+	//user.WithRoles().WithMenus()
+	user.WithMenus()
 	if user.IsSuperAdmin() {
 		menus, _ = db.WithDriver(conn).Table("goadmin_menu").
 			Where("id", ">", 0).
@@ -192,7 +193,6 @@ func GetGlobalMenu(user models.UserModel, conn db.Connection, lang string, plugi
 		for i := 0; i < len(user.MenuIds); i++ {
 			ids = append(ids, user.MenuIds[i])
 		}
-
 		menus, _ = db.WithDriver(conn).Table("goadmin_menu").
 			WhereIn("id", ids).
 			Where("plugin_name", "=", plugName).
@@ -234,7 +234,8 @@ func constructMenuTree(menus []map[string]interface{}, parentID int64, lang stri
 			if menus[j]["type"].(int64) == 1 {
 				title = language.Get(menus[j]["title"].(string))
 			} else {
-				title = menus[j]["title"].(string)
+				title = language.Get(menus[j]["title"].(string))
+				//title = menus[j]["title"].(string) Dennis TODO?
 			}
 
 			header, _ := menus[j]["header"].(string)

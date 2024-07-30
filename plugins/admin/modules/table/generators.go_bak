@@ -1,0 +1,482 @@
+
+
+/*
+func (s *SystemTable) GetManagerTable(ctx *context.Context) (managerTable Table) {
+	managerTable = NewDefaultTable(DefaultConfigWithDriver(config.GetDatabases().GetDefault().Driver))
+
+	info := managerTable.GetInfo().AddXssJsFilter().HideFilterArea()
+
+	info.AddField("ID", "id", db.Int).FieldSortable()
+	info.AddField(lg("Name"), "username", db.Varchar).FieldFilterable()
+	info.AddField(lg("Nickname"), "name", db.Varchar).FieldFilterable()
+	info.AddField(lg("role"), "name", db.Varchar).
+		FieldJoin(types.Join{
+			Table:     "goadmin_role_users",
+			JoinField: "user_id",
+			Field:     "id",
+		}).
+		FieldJoin(types.Join{
+			Table:     "goadmin_roles",
+			JoinField: "id",
+			Field:     "role_id",
+			BaseTable: "goadmin_role_users",
+		}).
+		FieldDisplay(func(model types.FieldModel) interface{} {
+			labels := template.HTML("")
+			labelTpl := label().SetType("success")
+
+			labelValues := strings.Split(model.Value, types.JoinFieldValueDelimiter)
+			for key, label := range labelValues {
+				if key == len(labelValues)-1 {
+					labels += labelTpl.SetContent(template.HTML(label)).GetContent()
+				} else {
+					labels += labelTpl.SetContent(template.HTML(label)).GetContent() + "<br><br>"
+				}
+			}
+
+			if labels == template.HTML("") {
+				return lg("no roles")
+			}
+
+			return labels
+		}).FieldFilterable()
+	info.AddField(lg("createdAt"), "created_at", db.Timestamp)
+	info.AddField(lg("updatedAt"), "updated_at", db.Timestamp)
+
+	info.SetTable("goadmin_users").
+		SetTitle(lg("Managers")).
+		SetDescription(lg("Managers")).
+		SetDeleteFn(func(idArr []string) error {
+
+			var ids = interfaces(idArr)
+
+			_, txErr := s.connection().WithTransaction(func(tx *sql.Tx) (e error, i map[string]interface{}) {
+
+				deleteUserRoleErr := s.connection().WithTx(tx).
+					Table("goadmin_role_users").
+					WhereIn("user_id", ids).
+					Delete()
+
+				if db.CheckError(deleteUserRoleErr, db.DELETE) {
+					return deleteUserRoleErr, nil
+				}
+
+				deleteUserPermissionErr := s.connection().WithTx(tx).
+					Table("goadmin_user_permissions").
+					WhereIn("user_id", ids).
+					Delete()
+
+				if db.CheckError(deleteUserPermissionErr, db.DELETE) {
+					return deleteUserPermissionErr, nil
+				}
+
+				deleteUserErr := s.connection().WithTx(tx).
+					Table("goadmin_users").
+					WhereIn("id", ids).
+					Delete()
+
+				if db.CheckError(deleteUserErr, db.DELETE) {
+					return deleteUserErr, nil
+				}
+
+				return nil, nil
+			})
+
+			return txErr
+		})
+
+	formList := managerTable.GetForm().AddXssJsFilter()
+
+	formList.AddField("ID", "id", db.Int, form.Default).FieldDisplayButCanNotEditWhenUpdate().FieldDisableWhenCreate()
+	formList.AddField(lg("Name"), "username", db.Varchar, form.Text).
+		FieldHelpMsg(template.HTML(lg("use for login"))).FieldMust()
+	formList.AddField(lg("Nickname"), "name", db.Varchar, form.Text).
+		FieldHelpMsg(template.HTML(lg("use to display"))).FieldMust()
+	formList.AddField(lg("Avatar"), "avatar", db.Varchar, form.File)
+	formList.AddField(lg("role"), "role_id", db.Varchar, form.Select).
+		FieldOptionsFromTable("goadmin_roles", "slug", "id").
+		FieldDisplay(func(model types.FieldModel) interface{} {
+			var roles []string
+
+			if model.ID == "" {
+				return roles
+			}
+			roleModel, _ := s.table("goadmin_role_users").Select("role_id").
+				Where("user_id", "=", model.ID).All()
+			for _, v := range roleModel {
+				roles = append(roles, strconv.FormatInt(v["role_id"].(int64), 10))
+			}
+			return roles
+		}).FieldHelpMsg(template.HTML(lg("no corresponding options?")) +
+		link("/admin/info/roles/new", "Create here."))
+
+	formList.AddField(lg("permission"), "permission_id", db.Varchar, form.Select).
+		FieldOptionsFromTable("goadmin_permissions", "slug", "id").
+		FieldDisplay(func(model types.FieldModel) interface{} {
+			var permissions []string
+
+			if model.ID == "" {
+				return permissions
+			}
+			permissionModel, _ := s.table("goadmin_user_permissions").
+				Select("permission_id").Where("user_id", "=", model.ID).All()
+			for _, v := range permissionModel {
+				permissions = append(permissions, strconv.FormatInt(v["permission_id"].(int64), 10))
+			}
+			return permissions
+		}).FieldHelpMsg(template.HTML(lg("no corresponding options?")) +
+		link("/admin/info/permission/new", "Create here."))
+
+	formList.AddField(lg("password"), "password", db.Varchar, form.Password).
+		FieldDisplay(func(value types.FieldModel) interface{} {
+			return ""
+		})
+	formList.AddField(lg("confirm password"), "password_again", db.Varchar, form.Password).
+		FieldDisplay(func(value types.FieldModel) interface{} {
+			return ""
+		})
+
+	formList.SetTable("goadmin_users").SetTitle(lg("Managers")).SetDescription(lg("Managers"))
+	formList.SetUpdateFn(func(values form2.Values) error {
+
+		if values.IsEmpty("name", "username") {
+			return errors.New("username and password can not be empty")
+		}
+
+		user := models.UserWithId(values.Get("id")).SetConn(s.conn)
+
+		password := values.Get("password")
+
+		if password != "" {
+
+			if password != values.Get("password_again") {
+				return errors.New("password does not match")
+			}
+
+			password = encodePassword([]byte(values.Get("password")))
+		}
+
+		_, txErr := s.connection().WithTransaction(func(tx *sql.Tx) (e error, i map[string]interface{}) {
+
+			avatar := values.Get("avatar")
+
+			if values.Get("avatar__delete_flag") == "1" {
+				avatar = ""
+			}
+
+			_, updateUserErr := user.WithTx(tx).Update(values.Get("username"),
+				password, values.Get("name"), avatar, values.Get("avatar__change_flag") == "1")
+
+			if db.CheckError(updateUserErr, db.UPDATE) {
+				return updateUserErr, nil
+			}
+
+			delRoleErr := user.WithTx(tx).DeleteRoles()
+
+			if db.CheckError(delRoleErr, db.DELETE) {
+				return delRoleErr, nil
+			}
+
+			for i := 0; i < len(values["role_id[]"]); i++ {
+				_, addRoleErr := user.WithTx(tx).AddRole(values["role_id[]"][i])
+				if db.CheckError(addRoleErr, db.INSERT) {
+					return addRoleErr, nil
+				}
+			}
+
+			delPermissionErr := user.WithTx(tx).DeletePermissions()
+
+			if db.CheckError(delPermissionErr, db.DELETE) {
+				return delPermissionErr, nil
+			}
+
+			for i := 0; i < len(values["permission_id[]"]); i++ {
+				_, addPermissionErr := user.WithTx(tx).AddPermission(values["permission_id[]"][i])
+				if db.CheckError(addPermissionErr, db.INSERT) {
+					return addPermissionErr, nil
+				}
+			}
+
+			return nil, nil
+		})
+
+		return txErr
+	})
+	formList.SetInsertFn(func(values form2.Values) error {
+		if values.IsEmpty("name", "username", "password") {
+			return errors.New("username and password can not be empty")
+		}
+
+		password := values.Get("password")
+
+		if password != values.Get("password_again") {
+			return errors.New("password does not match")
+		}
+
+		_, txErr := s.connection().WithTransaction(func(tx *sql.Tx) (e error, i map[string]interface{}) {
+
+			user, createUserErr := models.User().WithTx(tx).SetConn(s.conn).New(values.Get("username"),
+				encodePassword([]byte(values.Get("password"))),
+				values.Get("name"),
+				values.Get("avatar"))
+
+			if db.CheckError(createUserErr, db.INSERT) {
+				return createUserErr, nil
+			}
+
+			for i := 0; i < len(values["role_id[]"]); i++ {
+				_, addRoleErr := user.WithTx(tx).AddRole(values["role_id[]"][i])
+				if db.CheckError(addRoleErr, db.INSERT) {
+					return addRoleErr, nil
+				}
+			}
+
+			for i := 0; i < len(values["permission_id[]"]); i++ {
+				_, addPermissionErr := user.WithTx(tx).AddPermission(values["permission_id[]"][i])
+				if db.CheckError(addPermissionErr, db.INSERT) {
+					return addPermissionErr, nil
+				}
+			}
+
+			return nil, nil
+		})
+		return txErr
+	})
+
+	detail := managerTable.GetDetail()
+	detail.AddField("ID", "id", db.Int)
+	detail.AddField(lg("Name"), "username", db.Varchar)
+	detail.AddField(lg("Avatar"), "avatar", db.Varchar).
+		FieldDisplay(func(model types.FieldModel) interface{} {
+			if model.Value == "" || config.GetStore().Prefix == "" {
+				model.Value = config.Url("/assets/dist/img/avatar04.png")
+			} else {
+				model.Value = config.GetStore().URL(model.Value)
+			}
+			return template.Default().Image().
+				SetSrc(template.HTML(model.Value)).
+				SetHeight("120").SetWidth("120").WithModal().GetContent()
+		})
+	detail.AddField(lg("Nickname"), "name", db.Varchar)
+	detail.AddField(lg("role"), "roles", db.Varchar).
+		FieldDisplay(func(model types.FieldModel) interface{} {
+			labelModels, _ := s.table("goadmin_role_users").
+				Select("goadmin_roles.name").
+				LeftJoin("goadmin_roles", "goadmin_roles.id", "=", "goadmin_role_users.role_id").
+				Where("user_id", "=", model.ID).
+				All()
+
+			labels := template.HTML("")
+			labelTpl := label().SetType("success")
+
+			for key, label := range labelModels {
+				if key == len(labelModels)-1 {
+					labels += labelTpl.SetContent(template.HTML(label["name"].(string))).GetContent()
+				} else {
+					labels += labelTpl.SetContent(template.HTML(label["name"].(string))).GetContent() + "<br><br>"
+				}
+			}
+
+			if labels == template.HTML("") {
+				return lg("no roles")
+			}
+
+			return labels
+		})
+	detail.AddField(lg("permission"), "roles", db.Varchar).
+		FieldDisplay(func(model types.FieldModel) interface{} {
+			permissionModel, _ := s.table("goadmin_user_permissions").
+				Select("goadmin_permissions.name").
+				LeftJoin("goadmin_permissions", "goadmin_permissions.id", "=", "goadmin_user_permissions.permission_id").
+				Where("user_id", "=", model.ID).
+				All()
+
+			permissions := template.HTML("")
+			permissionTpl := label().SetType("success")
+
+			for key, label := range permissionModel {
+				if key == len(permissionModel)-1 {
+					permissions += permissionTpl.SetContent(template.HTML(label["name"].(string))).GetContent()
+				} else {
+					permissions += permissionTpl.SetContent(template.HTML(label["name"].(string))).GetContent() + "<br><br>"
+				}
+			}
+
+			return permissions
+		})
+	detail.AddField(lg("createdAt"), "created_at", db.Timestamp)
+	detail.AddField(lg("updatedAt"), "updated_at", db.Timestamp)
+
+	return
+}
+
+
+func (s *SystemTable) GetNormalManagerTable(ctx *context.Context) (managerTable Table) {
+	managerTable = NewDefaultTable(DefaultConfigWithDriver(config.GetDatabases().GetDefault().Driver))
+
+	info := managerTable.GetInfo().AddXssJsFilter().HideFilterArea()
+
+	info.AddField("ID", "id", db.Int).FieldSortable()
+	info.AddField(lg("Name"), "username", db.Varchar).FieldFilterable()
+	info.AddField(lg("Nickname"), "name", db.Varchar).FieldFilterable()
+	info.AddField(lg("role"), "name", db.Varchar).
+		FieldJoin(types.Join{
+			Table:     "goadmin_role_users",
+			JoinField: "user_id",
+			Field:     "id",
+		}).
+		FieldJoin(types.Join{
+			Table:     "goadmin_roles",
+			JoinField: "id",
+			Field:     "role_id",
+			BaseTable: "goadmin_role_users",
+		}).
+		FieldDisplay(func(model types.FieldModel) interface{} {
+			labels := template.HTML("")
+			labelTpl := label().SetType("success")
+
+			labelValues := strings.Split(model.Value, types.JoinFieldValueDelimiter)
+			for key, label := range labelValues {
+				if key == len(labelValues)-1 {
+					labels += labelTpl.SetContent(template.HTML(label)).GetContent()
+				} else {
+					labels += labelTpl.SetContent(template.HTML(label)).GetContent() + "<br><br>"
+				}
+			}
+
+			if labels == template.HTML("") {
+				return lg("no roles")
+			}
+
+			return labels
+		})
+	info.AddField(lg("createdAt"), "created_at", db.Timestamp)
+	info.AddField(lg("updatedAt"), "updated_at", db.Timestamp)
+
+	info.SetTable("goadmin_users").
+		SetTitle(lg("Managers")).
+		SetDescription(lg("Managers")).
+		SetDeleteFn(func(idArr []string) error {
+
+			var ids = interfaces(idArr)
+
+			_, txErr := s.connection().WithTransaction(func(tx *sql.Tx) (e error, i map[string]interface{}) {
+
+				deleteUserRoleErr := s.connection().WithTx(tx).
+					Table("goadmin_role_users").
+					WhereIn("user_id", ids).
+					Delete()
+
+				if db.CheckError(deleteUserRoleErr, db.DELETE) {
+					return deleteUserRoleErr, nil
+				}
+
+				deleteUserPermissionErr := s.connection().WithTx(tx).
+					Table("goadmin_user_permissions").
+					WhereIn("user_id", ids).
+					Delete()
+
+				if db.CheckError(deleteUserPermissionErr, db.DELETE) {
+					return deleteUserPermissionErr, nil
+				}
+
+				deleteUserErr := s.connection().WithTx(tx).
+					Table("goadmin_users").
+					WhereIn("id", ids).
+					Delete()
+
+				if db.CheckError(deleteUserErr, db.DELETE) {
+					return deleteUserErr, nil
+				}
+
+				return nil, nil
+			})
+
+			return txErr
+		})
+
+	formList := managerTable.GetForm().AddXssJsFilter()
+
+	formList.AddField("ID", "id", db.Int, form.Default).FieldDisplayButCanNotEditWhenUpdate().FieldDisableWhenCreate()
+	formList.AddField(lg("Name"), "username", db.Varchar, form.Text).FieldHelpMsg(template.HTML(lg("use for login"))).FieldMust()
+	formList.AddField(lg("Nickname"), "name", db.Varchar, form.Text).FieldHelpMsg(template.HTML(lg("use to display"))).FieldMust()
+	formList.AddField(lg("Avatar"), "avatar", db.Varchar, form.File)
+	formList.AddField(lg("password"), "password", db.Varchar, form.Password).
+		FieldDisplay(func(value types.FieldModel) interface{} {
+			return ""
+		})
+	formList.AddField(lg("confirm password"), "password_again", db.Varchar, form.Password).
+		FieldDisplay(func(value types.FieldModel) interface{} {
+			return ""
+		})
+
+	formList.SetTable("goadmin_users").SetTitle(lg("Managers")).SetDescription(lg("Managers"))
+	formList.SetUpdateFn(func(values form2.Values) error {
+
+		if values.IsEmpty("name", "username") {
+			return errors.New("username and password can not be empty")
+		}
+
+		user := models.UserWithId(values.Get("id")).SetConn(s.conn)
+
+		if values.Has("permission", "role") {
+			return errors.New(errs.NoPermission)
+		}
+
+		password := values.Get("password")
+
+		if password != "" {
+
+			if password != values.Get("password_again") {
+				return errors.New("password does not match")
+			}
+
+			password = encodePassword([]byte(values.Get("password")))
+		}
+
+		avatar := values.Get("avatar")
+
+		if values.Get("avatar__delete_flag") == "1" {
+			avatar = ""
+		}
+
+		_, updateUserErr := user.Update(values.Get("username"),
+			password, values.Get("name"), avatar, values.Get("avatar__change_flag") == "1")
+
+		if db.CheckError(updateUserErr, db.UPDATE) {
+			return updateUserErr
+		}
+
+		return nil
+	})
+	formList.SetInsertFn(func(values form2.Values) error {
+		if values.IsEmpty("name", "username", "password") {
+			return errors.New("username and password can not be empty")
+		}
+
+		password := values.Get("password")
+
+		if password != values.Get("password_again") {
+			return errors.New("password does not match")
+		}
+
+		if values.Has("permission", "role") {
+			return errors.New(errs.NoPermission)
+		}
+
+		_, createUserErr := models.User().SetConn(s.conn).New(values.Get("username"),
+			encodePassword([]byte(values.Get("password"))),
+			values.Get("name"),
+			values.Get("avatar"))
+
+		if db.CheckError(createUserErr, db.INSERT) {
+			return createUserErr
+		}
+
+		return nil
+	})
+
+	return
+}
+
+*/

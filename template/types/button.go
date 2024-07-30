@@ -7,6 +7,7 @@ import (
 	"github.com/GoAdminGroup/go-admin/context"
 	"github.com/GoAdminGroup/go-admin/modules/utils"
 	"github.com/GoAdminGroup/go-admin/plugins/admin/models"
+	"github.com/dypflying/chime-common/constant"
 )
 
 type Button interface {
@@ -221,6 +222,12 @@ func (b Buttons) FooterContent() template.HTML {
 func (b Buttons) CheckPermission(user models.UserModel) Buttons {
 	btns := make(Buttons, 0)
 	for _, btn := range b {
+		//normal user can not access site config
+		if user.Role == constant.ROLE_USER || user.Role == constant.ROLE_READONLY {
+			if btn.GetName() == NavBtnSiteName {
+				continue
+			}
+		}
 		if btn.IsType(ButtonTypeNavDropDown) {
 			items := make([]Button, 0)
 			for _, navItem := range btn.(*NavDropDownButton).Items {

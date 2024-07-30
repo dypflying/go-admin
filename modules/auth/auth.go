@@ -33,7 +33,7 @@ func Check(password string, username string, conn db.Connection) (user models.Us
 	} else {
 		if comparePassword(password, user.Password) {
 			ok = true
-			user = user.WithRoles().WithPermissions().WithMenus()
+			user = user.WithMenus()
 			user.UpdatePwd(EncodePassword([]byte(password)))
 		} else {
 			ok = false

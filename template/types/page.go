@@ -146,8 +146,9 @@ func NewPage(param *NewPageParam) *Page {
 		Panel:      param.Panel,
 		UpdateMenu: param.UpdateMenu,
 		System: SystemInfo{
-			Version: system.Version(),
-			Theme:   config.GetTheme(),
+			Version:    system.Version(),
+			Theme:      config.GetTheme(),
+			AppVersion: system.AppVersion(),
 		},
 		UrlPrefix:      config.AssertPrefix(),
 		Title:          config.GetTitle(),
@@ -178,15 +179,17 @@ func NewPagePanel(panel Panel) *Page {
 	return &Page{
 		Panel: panel,
 		System: SystemInfo{
-			Version: system.Version(),
+			Version:    system.Version(),
+			AppVersion: system.AppVersion(),
 		},
 	}
 }
 
 // SystemInfo contains basic info of system.
 type SystemInfo struct {
-	Version string
-	Theme   string
+	Version    string
+	Theme      string
+	AppVersion string
 }
 
 type TableRowData struct {
