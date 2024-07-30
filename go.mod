@@ -8,7 +8,7 @@ replace github.com/dypflying/chime-common => ../chime-common
 
 require (
 	github.com/360EntSecGroup-Skylar/excelize v1.4.1
-	github.com/AlecAivazis/survey/v2 v2.3.7
+	github.com/AlecAivazis/survey/v2 v2.3.6 // indirect
 	github.com/GoAdminGroup/html v0.0.1
 	github.com/GoAdminGroup/themes v0.0.42
 	github.com/NebulousLabs/fastrand v0.0.0-20181203155948-6fb6489aac4e
@@ -17,6 +17,7 @@ require (
 	github.com/beego/beego/v2 v2.1.1
 	github.com/buaazp/fasthttprouter v0.1.1
 	github.com/denisenkom/go-mssqldb v0.0.0-20200206145737-bbfc9a55622e
+
 	github.com/dypflying/chime-common v0.0.0-00010101000000-000000000000
 	github.com/dypflying/chime-portal v0.0.0-00010101000000-000000000000
 	github.com/gavv/httpexpect v2.0.0+incompatible
@@ -38,6 +39,7 @@ require (
 	github.com/mattn/go-sqlite3 v2.0.3+incompatible
 	github.com/mgutz/ansi v0.0.0-20200706080929-d51e80ef957d
 	github.com/natefinch/lumberjack v2.0.0+incompatible
+
 	github.com/schollz/progressbar v1.0.0
 	github.com/sclevine/agouti v3.0.0+incompatible
 	github.com/stretchr/testify v1.8.4
