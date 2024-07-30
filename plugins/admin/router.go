@@ -7,6 +7,7 @@ import (
 	"github.com/GoAdminGroup/go-admin/modules/utils"
 	"github.com/GoAdminGroup/go-admin/plugins/admin/modules/response"
 	"github.com/GoAdminGroup/go-admin/template"
+	v1 "github.com/dypflying/chime-portal/v1"
 )
 
 // initRouter initialize the router and return the context.
@@ -17,7 +18,8 @@ func (admin *Admin) initRouter() *Admin {
 
 	// auth
 	route.GET(config.GetLoginUrl(), admin.handler.ShowLogin)
-	route.POST("/signin", admin.handler.Auth)
+	//route.POST("/signin", admin.handler.Auth)
+	route.POST("/signin", v1.Signin)
 
 	// auto install
 	route.GET("/install", admin.handler.ShowInstall)
@@ -40,7 +42,8 @@ func (admin *Admin) initRouter() *Admin {
 	authRoute := route.Group("/", auth.Middleware(admin.Conn))
 
 	// auth
-	authRoute.GET("/logout", admin.handler.Logout)
+	//authRoute.GET("/logout", admin.handler.Logout)
+	authRoute.GET("/logout", v1.Signout)
 
 	authPrefixRoute := route.Group("/", auth.Middleware(admin.Conn), admin.guardian.CheckPrefix)
 

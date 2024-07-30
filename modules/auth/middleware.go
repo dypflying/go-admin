@@ -14,11 +14,11 @@ import (
 	"github.com/GoAdminGroup/go-admin/modules/db"
 	"github.com/GoAdminGroup/go-admin/modules/errors"
 	"github.com/GoAdminGroup/go-admin/modules/language"
-	"github.com/GoAdminGroup/go-admin/modules/logger"
 	"github.com/GoAdminGroup/go-admin/modules/page"
 	"github.com/GoAdminGroup/go-admin/plugins/admin/models"
 	template2 "github.com/GoAdminGroup/go-admin/template"
 	"github.com/GoAdminGroup/go-admin/template/types"
+	v1 "github.com/dypflying/chime-portal/v1"
 )
 
 // Invoker contains the callback functions which are used
@@ -132,13 +132,11 @@ func (invoker *Invoker) Middleware() context.Handler {
 			ctx.Next()
 			return
 		}
-
 		if !authOk {
 			invoker.authFailCallback(ctx)
 			ctx.Abort()
 			return
 		}
-
 		if !permissionOk {
 			ctx.SetUserValue("user", user)
 			invoker.permissionDenyCallback(ctx)
@@ -151,84 +149,37 @@ func (invoker *Invoker) Middleware() context.Handler {
 // Filter retrieve the user model from Context and check the permission
 // at the same time.
 func Filter(ctx *context.Context, conn db.Connection) (models.UserModel, bool, bool) {
-	var (
-		id float64
-		ok bool
 
-		user     = models.User()
-		ses, err = InitSession(ctx, conn)
-	)
-
-	if err != nil {
-		logger.Error("retrieve auth user failed", err)
-		return user, false, false
-	}
-
-	if id, ok = ses.Get("user_id").(float64); !ok {
-		return user, false, false
-	}
-
-	user, ok = GetCurUserByID(int64(id), conn)
-
+	token := ctx.Cookie(v1.DefaultPortalCookie)
+	user, ok := GetCurUser(token, conn)
 	if !ok {
-		return user, false, false
+		return user, false, true
 	}
-
-	return user, true, CheckPermissions(user, ctx.Request.URL.String(), ctx.Method(), ctx.PostForm())
-}
-
-const defaultUserIDSesKey = "user_id"
-
-// GetUserID return the user id from the session.
-func GetUserID(sesKey string, conn db.Connection) int64 {
-	id, err := GetSessionByKey(sesKey, defaultUserIDSesKey, conn)
-	if err != nil {
-		logger.Error("retrieve auth user failed", err)
-		return -1
-	}
-	if idFloat64, ok := id.(float64); ok {
-		return int64(idFloat64)
-	}
-	return -1
+	return user, true, CheckPermissions(user, ctx.Request.URL.RequestURI(), ctx.Method(), ctx.PostForm())
 }
 
 // GetCurUser return the user model.
-func GetCurUser(sesKey string, conn db.Connection) (user models.UserModel, ok bool) {
+func GetCurUser(sesKey string, conn db.Connection) (models.UserModel, bool) {
 
-	if sesKey == "" {
-		ok = false
-		return
+	var userMap map[string]any
+	var err error
+	user := models.User().SetConn(conn)
+	if userMap, err = v1.GetUser(sesKey); err != nil {
+		return user, false
 	}
-
-	id := GetUserID(sesKey, conn)
-	if id == -1 {
-		ok = false
-		return
-	}
-	return GetCurUserByID(id, conn)
-}
-
-// GetCurUserByID return the user model of given user id.
-func GetCurUserByID(id int64, conn db.Connection) (user models.UserModel, ok bool) {
-
-	user = models.User().SetConn(conn).Find(id)
-
-	if user.IsEmpty() {
-		ok = false
-		return
-	}
-
+	user.UUID, _ = userMap["uuid"].(string)
+	user.Name, _ = userMap["nick_name"].(string)
+	user.UserName, _ = userMap["name"].(string)
+	user.Avatar, _ = userMap["avatar"].(string)
 	if user.Avatar == "" || config.GetStore().Prefix == "" {
 		user.Avatar = ""
 	} else {
 		user.Avatar = config.GetStore().URL(user.Avatar)
 	}
-
-	user = user.WithRoles().WithPermissions().WithMenus()
-
-	ok = user.HasMenu()
-
-	return
+	user.Role, _ = userMap["role"].(int64)
+	user.LevelName = "Super"
+	user = user.WithMenus()
+	return user, user.HasMenu()
 }
 
 // CheckPermissions check the permission of the user.

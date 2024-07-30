@@ -103,6 +103,7 @@ func PopUpWithIframe(id, title string, data IframeData, width, height string) *P
 		data.Src = data.Src + "?"
 	}
 	modalID := "info-popup-model-" + utils.Uuid(10)
+	//modalID := "info-popup-model-dennis"
 	var handler types.Handler = func(ctx *context.Context) (success bool, msg string, res interface{}) {
 		param := ""
 		if data.AddParameterFn != nil {
@@ -185,7 +186,7 @@ func PopUpWithForm(data PopUpData, fn GetForm, url string) *PopUpAction {
 				SetPrefix(config.PrefixFixSlash()).
 				SetUrl(url).
 				SetOperationFooter(col1 + col2).GetContent()).
-				SetStyle(template.HTMLAttr(`overflow-x: hidden;overflow-y: hidden;`)).
+			SetStyle(template.HTMLAttr(`overflow-x: hidden;overflow-y: hidden;`)).
 			GetContent()
 	}
 	return &PopUpAction{
@@ -288,8 +289,12 @@ func (pop *PopUpAction) Js() template.JS {
 						let data = `+pop.Data.JSON()+`;
 						`) + pop.ParameterJS + template.JS(`
 						let id = $(this).attr("data-id");
+						let extra_id = $(this).attr("extra-id");
 						if (id && id !== "") {
 							data["id"] = id;
+						}
+						if (extra_id && extra_id !== "") {
+							data["extra_id"] = extra_id;
 						}
 						data['popup_id'] = "`+pop.Id+`"
 						$.ajax({

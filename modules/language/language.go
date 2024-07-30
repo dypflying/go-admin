@@ -39,7 +39,7 @@ func FixedLanguageKey(key string) string {
 	return key
 }
 
-var Langs = [...]string{EN, CN, JP, TC}
+var Langs = [...]string{EN, CN}
 
 // Get return the value of default scope.
 func Get(value string) string {
@@ -68,7 +68,6 @@ func GetWithScopeAndLanguageSet(value, lang string, scopes ...string) string {
 	if locale, ok := Lang[lang][JoinScopes(scopes)+strings.ToLower(value)]; ok {
 		return locale
 	}
-
 	return value
 }
 

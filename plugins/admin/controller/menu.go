@@ -232,6 +232,7 @@ func (h *Handler) NewMenu(ctx *context.Context) {
 	menu.GetGlobalMenu(user, h.conn, ctx.Lang(), param.PluginName).AddMaxOrder()
 
 	h.getMenuInfoPanel(ctx, param.PluginName, "")
+
 	ctx.AddHeader("Content-Type", "text/html; charset=utf-8")
 	ctx.AddHeader(constant.PjaxUrlHeader, h.routePath("menu")+params)
 }

@@ -17,6 +17,7 @@ const loginTmpl = `{{define "login_theme1"}}
     <head>
         <meta charset="utf-8">
         <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <link rel="shortcut icon" type="image/x-icon" href="/resource/icons/logo_shortcut.png" />
         <title>{{.Title}}</title>
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
@@ -27,11 +28,17 @@ const loginTmpl = `{{define "login_theme1"}}
         <![endif]-->
 
     </head>
-    <body>
+    <body style="height:100%;">
 
-    <div class="container">
+    <div class="container" style="height:80px; width:100%; position: absolute;top:0; background: rgb(255, 255, 255);"> 
+      <div class="row" style="padding:10px 0 10px 50px;"> 
+        <img src="/resource/icons/logo_head.png" style="height:60px;width:70px;">
+        <span style="font-size: 18px;color: rgb(24, 24, 24);display: inline-block;padding: 0px 10px;">登录</span>
+      </div>
+    </div>
+    <div class="container" style="position: absolute;top:80px;bottom:60px;width:100%;background-size: 100% 100%; background-repeat:no-repeat; background-attachment:fixed;background-image: url(/resource/images/login.jpeg);" >
         <div class="row" style="margin-top: 80px;">
-            <div class="col-md-4 col-md-offset-4">
+            <div class="col-md-4 col-md-offset-7">
                 <form action="##" onsubmit="return false" method="post" id="sign-up-form" class="fh5co-form animate-box"
                       data-animate-effect="fadeIn">
                     <h2>{{.Title}}</h2>
@@ -51,18 +58,21 @@ const loginTmpl = `{{define "login_theme1"}}
                 </form>
             </div>
         </div>
-        <div class="row" style="padding-top: 60px; clear: both;">
+    </div>
+    <div class="container" style="height:60px; width:100%;position: absolute;bottom:0;"> 
+      <div class="row" style="padding-top: 15px; clear: both;">
             <div class="col-md-12 text-center">
                 <p>
-                    <small>&copy; All Rights Reserved. GoAdmin</small>
+                    <small>&copy; All Rights Reserved. ChimeStack</small>
                 </p>
             </div>
         </div>
     </div>
 
-    <div id="particles-js">
+    <!--<div id="particles-js">
         <canvas class="particles-js-canvas-el" width="1606" height="1862" style="width: 100%; height: 100%;"></canvas>
-    </div>
+    </div> -->
+
 
     <script src="{{link .CdnUrl .UrlPrefix "/assets/login/dist/all.min.js"}}"></script>
 

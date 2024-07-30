@@ -278,6 +278,7 @@ var en = LangSet{
 	"system.mem_used":         "Used Memory",
 
 	"system.app_name":         "App Name",
+	"system.app_version":      "App Version",
 	"system.go_admin_version": "App Version",
 	"system.theme_name":       "Theme",
 	"system.theme_version":    "Theme Version",
