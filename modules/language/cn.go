@@ -482,4 +482,5 @@ var cn = LangSet{
 	"alert rule":                         "报警规则",
 	"snapshot":                           "快照",
 	"security group":                     "安全组",
+	"alert receiver":                     "报警接收者",
 }
